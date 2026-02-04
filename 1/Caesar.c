@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include <stdlib.h>
 
 #define STR2(x)	STR(x)
@@ -11,22 +12,26 @@ char caesar(char const p_plain, char const p_key) {
 
 int main(int const p_argc, char *const *const p_argv) {
 	puts("Please enter under " STR2(SIZE) " characters of plaintext:");
+	char cipher[SIZE];
 	char plain[SIZE];
 
-	int const len = scanf("%" STR2(SIZE) "c", plain);
-	plain[SIZE - 1] = '\0';
+	fgets(plain, SIZE, stdin);
+	size_t const len = strlen(plain);
 
-	printf("%d", len);
+	printf("Key (`int`)?: ");
+	int key;
+	scanf("%d", &key);
 
-	char cipher[SIZE];
+	for (size_t i = 0; i < len - 1; ++i) {
 
-	for (int i = 0; i < SIZE - 1; ++i) {
-
-		cipher[i] = caesar(plain[i], 0);
+		cipher[i] = caesar(*(plain + i), key);
 
 	}
 
-	printf("Ciphertext: `%s`.\n", cipher);
+	cipher[len - 1] = '\0';
+
+	printf("Ciphertext: %s\n", cipher);
 	exit(EXIT_SUCCESS);
+
 }
 
