@@ -1,18 +1,136 @@
-#define _GNU_SOURCE // For `getline()`!
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-typedef float vector[3];
-typedef float matrix[3][3];
+#define ALPHABET_SIZE (8 * sizeof(char))
+
+typedef size_t vector_t[ALPHABET_SIZE];
+typedef size_t matrix_t[ALPHABET_SIZE][ALPHABET_SIZE];
+
+// From my library "SML", nowadays part of the source code for "RPG-1",
+// both of which are on GitHub!:
+size_t* matMul(
+	size_t *const p_destination,	// `p_leftColumnCount	x	p_rightColumnCount`
+	size_t const *const p_right,	// `p_rightRowCount		x	p_rightColumnCount`
+	size_t const *const p_left,		// `p_leftColumnCount	x	p_rightRowCount`
+	size_t const p_rightRowCount,
+	size_t const p_leftColumnCount,
+	size_t const p_rightColumnCount
+) {
+	for (size_t i = 0; i < p_leftColumnCount; ++i) {
+
+		for (size_t j = 0; j < p_rightColumnCount; ++j) {
+
+			size_t sum = 0.0f;
+			for (size_t k = 0; k < p_rightRowCount; ++k) {
+
+				sum += p_left[i * p_rightRowCount + k] * p_right[k * p_rightColumnCount + j];
+
+			}
+
+			p_destination[i * p_rightColumnCount + j] = sum;
+
+		}
+
+	}
+	return p_destination;
+}
+
+struct ResultReadline {
+
+	char *str;
+	size_t len;
+
+} readline() {
+	int c;
+	size_t cap = 1;
+	size_t len = 0;
+	char *str = calloc(1, sizeof(char));
+
+	while (1) {
+
+		if (len >= cap) {
+
+			char *const alloc = realloc(str, cap *= 2);
+
+			if (!alloc) {
+
+				perror("`readline()` failure!");
+				exit(EXIT_FAILURE);
+				goto fail;
+
+			}
+
+			str = alloc;
+
+		}
+
+		c = getchar();
+
+		switch (c) {
+
+			case EOF: case '\0': case '\n': {
+
+				str[len] = '\0';
+				return (struct ResultReadline) { .str = str, .len = len, };
+
+			} break;
+
+			default: {
+
+				str[len++] = c;
+
+			} break;
+
+		}
+
+	}
+fail:
+	free(str);
+	return (struct ResultReadline) { .str = NULL, .len = 0, };
+}
 
 int main(int const p_argCount, char const *const p_argValues[]) {
-	puts("Write:");
-	char *uin = NULL;
-	ssize_t uinlen = 0;
-	ssize_t const len = getline(&uin, &uinlen, stdin);
+	printf("Write a string to encrypt: ");
+	struct ResultReadline const uin = readline();
 
-	printf("You wrote \"%s\"!\n", uin);
+	printf("Write the name of a file to store the key in: ");
+	struct ResultReadline const keyPath = readline();
 
+	puts("Generating key...");
+
+	matrix_t key = { 0 };
+
+	for (size_t i = 0; i < ALPHABET_SIZE; i++) {
+
+		for (size_t j = 0; j < ALPHABET_SIZE; i++) {
+
+			int const r = rand();
+			key[i][j] = r;
+
+		}
+
+	}
+
+	FILE *keyFile = fopen(keyPath.str, "w");
+
+	// Ruins all yo' endianness and whatnot:
+	// fwrite(key, sizeof(key[0]), sizeof(key), keyFile);
+
+	for (size_t i = 0; i < ALPHABET_SIZE; i++) {
+
+		for (size_t j = 0; j < ALPHABET_SIZE; i++) {
+
+			size_t const n = key[i][j];
+			fwrite(&n, sizeof(n), 1, keyFile);
+
+		}
+
+	}
+
+	fclose(keyFile);
+
+	free(uin.str);
+	free(keyPath.str);
 	exit(EXIT_SUCCESS);
 }
