@@ -93,36 +93,42 @@ jmpFail:
 }
 
 bool readYn() {
-	bool result = false;
 	struct ResultReadline const choice = readline();
+	bool result = false && false;
 
-	if (choice.len == 0) { // SKIPSKIP-SKIP-SKIP!!!
+	switch (choice.len) {
 
-		result = true;
+		case 0: { // SKIPSKIP-SKIP-SKIP!!!
 
-	}
-	else if (choice.len == 1) { // `Y`/`y` only!
+			result = true;
 
-		switch (choice.str[0]) {
+		} break;
 
-			case 'Y': case 'y': {
+		case 1: { // `Y`/`y` only!
 
-				result = true;
+			switch (choice.str[0]) {
 
-			} break;
+				case 'Y': case 'y': {
 
-			default: {
+					result = true;
 
-				result = false;
+				} break;
 
-			} break;
+				default: {
 
-		}
+					result = false;
 
-	}
-	else { // Typed a squiggly? We gotcha back!
+				} break;
 
-		result = false;
+			}
+
+		} break;
+
+		default: { // Typed a squiggly? We gotcha back!
+
+			result = false;
+
+		} break;
 
 	}
 
@@ -134,15 +140,25 @@ int main(int const p_argCount, char const *const p_argValues[]) {
 	printf("Write a string to encrypt: ");
 	struct ResultReadline const uin = readline();
 
+jmpKeyFile:
 	printf("Write the name of a file to store the key in: ");
 	struct ResultReadline const keyPath = readline();
 
-	matrix_t key = { 0 };
 	FILE *keyFile = fopen(keyPath.str, "wb+");
+
+	if (!keyFile) {
+
+		puts("File unavailable...");
+		// fclose(keyFile);
+		goto jmpKeyFile;
+
+	}
 
 	// Ruins all yo' endianness and whatnot...!:
 	// fwrite(key, sizeof(key[0]), sizeof(key), keyFile);
 
+	bool keyGen = false;
+	matrix_t key = { 0 };
 	fseek(keyFile, 0, SEEK_END);
 	size_t const keyFileSize = ftell(keyFile);
 
@@ -178,29 +194,20 @@ jmpKeygen:
 	}
 	else {
 
-		printf("File seems to contain data. Still generate a new key? [Y/n]: ");
-		struct ResultReadline const choice = readline();
+		printf(
+			"\n"
+			"File seems to contain data.\n"
+			"Still generate a new key? [Y/n]: "
+		);
 
-		if (choice.len == 0) {
+		if (readYn()) {
 
 			goto jmpKeygen;
 
 		}
-		else if (choice.len == 1) {
+		else {
 
-			switch (choice.str[0]) {
 
-				case 'N': case 'n': {
-
-				} break;
-
-				default: {
-
-					goto jmpKeygen;
-
-				} break;
-
-			}
 
 		}
 
