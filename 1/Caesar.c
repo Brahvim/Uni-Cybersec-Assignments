@@ -18,8 +18,8 @@ int main(int const p_argc, char *const *const p_argv) {
 	fgets(plain, SIZE, stdin);
 	size_t const len = strlen(plain);
 
-	printf("Key (`int`)?: ");
 	int key;
+	printf("Key (`int`)?: ");
 	scanf("%d", &key);
 
 	for (size_t i = 0; i < len - 1; ++i) {
