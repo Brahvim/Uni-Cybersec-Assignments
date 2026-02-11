@@ -1,32 +1,34 @@
 #include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <sys/socket.h>
 
 #define unlikely(p_condition)	__builtin_expect(p_condition, 0)
 #define likely(p_condition)		__builtin_expect(p_condition, 1)
 
 #define ABET_SIZE (8 * sizeof(char)) // "Alphabet".
 
-typedef size_t vector_t[ABET_SIZE];
-typedef size_t matrix_t[ABET_SIZE][ABET_SIZE];
+typedef uint8_t vector_t[ABET_SIZE];
+typedef uint8_t matrix_t[ABET_SIZE][ABET_SIZE];
 
 // From my library "SML", nowadays part of the source code for "RPG-1",
 // both of which are on GitHub!:
-size_t* matMul(
-	size_t *const p_destination,	// `p_leftColumnCount	x	p_rightColumnCount`
-	size_t const *const p_right,	// `p_rightRowCount		x	p_rightColumnCount`
-	size_t const *const p_left,		// `p_leftColumnCount	x	p_rightRowCount`
-	size_t const p_rightRowCount,
-	size_t const p_leftColumnCount,
-	size_t const p_rightColumnCount
+uint8_t* matMul(
+	uint8_t *const p_destination,	// `p_leftColumnCount	x	p_rightColumnCount`
+	uint8_t const *const p_right,	// `p_rightRowCount		x	p_rightColumnCount`
+	uint8_t const *const p_left,		// `p_leftColumnCount	x	p_rightRowCount`
+	uint8_t const p_rightRowCount,
+	uint8_t const p_leftColumnCount,
+	uint8_t const p_rightColumnCount
 ) {
-	for (size_t i = 0; i < p_leftColumnCount; ++i) {
+	for (uint8_t i = 0; i < p_leftColumnCount; ++i) {
 
-		for (size_t j = 0; j < p_rightColumnCount; ++j) {
+		for (uint8_t j = 0; j < p_rightColumnCount; ++j) {
 
-			size_t sum = 0;
-			for (size_t k = 0; k < p_rightRowCount; ++k) {
+			uint8_t sum = 0;
+			for (uint8_t k = 0; k < p_rightRowCount; ++k) {
 
 				sum += p_left[i * p_rightRowCount + k] * p_right[k * p_rightColumnCount + j];
 
@@ -147,12 +149,13 @@ jmpKeyFile:
 	printf("Write the name of a file to read a key from / store the key in: ");
 	struct ResultReadline const keyPath = readline();
 
-	FILE *keyFile = fopen(keyPath.str, "r");
+	FILE *keyFile = fopen(keyPath.str, "wb+");
 
 	if (!keyFile) {
 
 		puts("File unavailable...");
 		// fclose(keyFile);
+		free(keyPath.str);
 		goto jmpKeyFile;
 
 	}
@@ -163,7 +166,7 @@ jmpKeyFile:
 	bool keyGen = false;
 	matrix_t key = { 0 };
 	fseek(keyFile, 0, SEEK_END);
-	size_t const keyFileSize = ftell(keyFile);
+	long const keyFileSize = ftell(keyFile);
 	bool const keyFileEmpty = keyFileSize == 0;
 
 	if (keyFileEmpty) {
@@ -186,17 +189,17 @@ jmpKeyFile:
 
 	if (keyGen) {
 
-		fclose(keyFile);
-		keyFile = freopen(keyPath.str, "w", keyFile);
-
-		if (!keyFile) { // Perhaps open this handle earlier so this check's up there?
-
-			puts("Cannot write to key file...");
-			// exit(EXIT_FAILURE);
-			free(keyPath.str);
-			goto jmpKeyFile;
-
-		}
+		// fclose(keyFile);
+		// keyFile = freopen(keyPath.str, "w", keyFile);
+		//
+		// if (!keyFile) { // Perhaps open this handle earlier so this check's up there?
+		//
+		// 	puts("Cannot write to key file...");
+		// 	// exit(EXIT_FAILURE);
+		// 	free(keyPath.str);
+		// 	goto jmpKeyFile;
+		//
+		// }
 
 		puts("Generating key...");
 
@@ -217,7 +220,7 @@ jmpKeyFile:
 
 			for (size_t j = 0; j < ABET_SIZE; j++) {
 
-				size_t const n = key[i][j];
+				uint8_t const n = key[i][j];
 				fwrite(&n, sizeof(n), 1, keyFile);
 				// STILL ruins all yo' endianness and whatnot...!
 
@@ -230,9 +233,9 @@ jmpKeyFile:
 
 		puts("Reading key from file...");
 
-		for (size_t i = 0; i < ABET_SIZE; i++) {
+		for (uint8_t i = 0; i < ABET_SIZE; i++) {
 
-			for (size_t j = 0; j < ABET_SIZE; j++) {
+			for (uint8_t j = 0; j < ABET_SIZE; j++) {
 
 				fread(
 					&(key[i][j]),
