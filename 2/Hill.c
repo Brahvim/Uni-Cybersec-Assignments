@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
 #define ALPHABET_SIZE (8 * sizeof(char))
 
@@ -91,6 +92,44 @@ jmpFail:
 	return (struct ResultReadline) { .str = NULL, .len = 0, };
 }
 
+bool readYn() {
+	bool result = false;
+	struct ResultReadline const choice = readline();
+
+	if (choice.len == 0) { // SKIPSKIP-SKIP-SKIP!!!
+
+		result = true;
+
+	}
+	else if (choice.len == 1) { // `Y`/`y` only!
+
+		switch (choice.str[0]) {
+
+			case 'Y': case 'y': {
+
+				result = true;
+
+			} break;
+
+			default: {
+
+				result = false;
+
+			} break;
+
+		}
+
+	}
+	else { // Typed a squiggly? We gotcha back!
+
+		result = false;
+
+	}
+
+	free(choice.str);
+	return result;
+}
+
 int main(int const p_argCount, char const *const p_argValues[]) {
 	printf("Write a string to encrypt: ");
 	struct ResultReadline const uin = readline();
@@ -153,17 +192,6 @@ jmpKeygen:
 
 				case 'N': case 'n': {
 
-					// for (size_t i = 0; i < ALPHABET_SIZE; i++) {
-
-					// 	for (size_t j = 0; j < ALPHABET_SIZE; i++) {
-
-					// 		size_t const n = key[i][j];
-					// 		fwrite(&n, sizeof(n), 1, keyFile);
-
-					// 	}
-
-					// }
-
 				} break;
 
 				default: {
@@ -178,10 +206,8 @@ jmpKeygen:
 
 	}
 
-
-	fclose(keyFile);
-
 	free(uin.str);
+	fclose(keyFile);
 	free(keyPath.str);
 	exit(EXIT_SUCCESS);
 }
