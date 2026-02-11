@@ -57,7 +57,7 @@ struct ResultReadline {
 
 				perror("`readline()` failure!");
 				exit(EXIT_FAILURE);
-				goto fail;
+				goto jmpFail;
 
 			}
 
@@ -85,7 +85,8 @@ struct ResultReadline {
 		}
 
 	}
-fail:
+
+jmpFail:
 	free(str);
 	return (struct ResultReadline) { .str = NULL, .len = 0, };
 }
@@ -97,36 +98,86 @@ int main(int const p_argCount, char const *const p_argValues[]) {
 	printf("Write the name of a file to store the key in: ");
 	struct ResultReadline const keyPath = readline();
 
-	puts("Generating key...");
-
 	matrix_t key = { 0 };
+	FILE *keyFile = fopen(keyPath.str, "wb+");
 
-	for (size_t i = 0; i < ALPHABET_SIZE; i++) {
-
-		for (size_t j = 0; j < ALPHABET_SIZE; i++) {
-
-			int const r = rand();
-			key[i][j] = r;
-
-		}
-
-	}
-
-	FILE *keyFile = fopen(keyPath.str, "w");
-
-	// Ruins all yo' endianness and whatnot:
+	// Ruins all yo' endianness and whatnot...!:
 	// fwrite(key, sizeof(key[0]), sizeof(key), keyFile);
 
-	for (size_t i = 0; i < ALPHABET_SIZE; i++) {
+	fseek(keyFile, 0, SEEK_END);
+	size_t const keyFileSize = ftell(keyFile);
 
-		for (size_t j = 0; j < ALPHABET_SIZE; i++) {
+	if (keyFileSize == 0) {
+jmpKeygen:
 
-			size_t const n = key[i][j];
-			fwrite(&n, sizeof(n), 1, keyFile);
+		puts("Generating key...");
+
+		for (size_t i = 0; i < ALPHABET_SIZE; i++) {
+
+			for (size_t j = 0; j < ALPHABET_SIZE; i++) {
+
+				int const r = rand();
+				key[i][j] = r;
+
+			}
+
+		}
+
+		puts("Writing key to file...");
+
+		for (size_t i = 0; i < ALPHABET_SIZE; i++) {
+
+			for (size_t j = 0; j < ALPHABET_SIZE; i++) {
+
+				size_t const n = key[i][j];
+				fwrite(&n, sizeof(n), 1, keyFile);
+
+			}
 
 		}
 
 	}
+	else {
+
+		printf("File seems to contain data. Still generate a new key? [Y/n]: ");
+		struct ResultReadline const choice = readline();
+
+		if (choice.len == 0) {
+
+			goto jmpKeygen;
+
+		}
+		else if (choice.len == 1) {
+
+			switch (choice.str[0]) {
+
+				case 'N': case 'n': {
+
+					// for (size_t i = 0; i < ALPHABET_SIZE; i++) {
+
+					// 	for (size_t j = 0; j < ALPHABET_SIZE; i++) {
+
+					// 		size_t const n = key[i][j];
+					// 		fwrite(&n, sizeof(n), 1, keyFile);
+
+					// 	}
+
+					// }
+
+				} break;
+
+				default: {
+
+					goto jmpKeygen;
+
+				} break;
+
+			}
+
+		}
+
+	}
+
 
 	fclose(keyFile);
 
