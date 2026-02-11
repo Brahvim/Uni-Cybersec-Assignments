@@ -3,10 +3,13 @@
 #include <string.h>
 #include <stdbool.h>
 
-#define ALPHABET_SIZE (8 * sizeof(char))
+#define unlikely(p_condition)	__builtin_expect(p_condition, 0)
+#define likely(p_condition)		__builtin_expect(p_condition, 1)
 
-typedef size_t vector_t[ALPHABET_SIZE];
-typedef size_t matrix_t[ALPHABET_SIZE][ALPHABET_SIZE];
+#define ABET_SIZE (8 * sizeof(char)) // "Alphabet".
+
+typedef size_t vector_t[ABET_SIZE];
+typedef size_t matrix_t[ABET_SIZE][ABET_SIZE];
 
 // From my library "SML", nowadays part of the source code for "RPG-1",
 // both of which are on GitHub!:
@@ -22,7 +25,7 @@ size_t* matMul(
 
 		for (size_t j = 0; j < p_rightColumnCount; ++j) {
 
-			size_t sum = 0.0f;
+			size_t sum = 0;
 			for (size_t k = 0; k < p_rightRowCount; ++k) {
 
 				sum += p_left[i * p_rightRowCount + k] * p_right[k * p_rightColumnCount + j];
@@ -141,10 +144,10 @@ int main(int const p_argCount, char const *const p_argValues[]) {
 	struct ResultReadline const uin = readline();
 
 jmpKeyFile:
-	printf("Write the name of a file to store the key in: ");
+	printf("Write the name of a file to read a key from / store the key in: ");
 	struct ResultReadline const keyPath = readline();
 
-	FILE *keyFile = fopen(keyPath.str, "wb+");
+	FILE *keyFile = fopen(keyPath.str, "r");
 
 	if (!keyFile) {
 
@@ -161,35 +164,12 @@ jmpKeyFile:
 	matrix_t key = { 0 };
 	fseek(keyFile, 0, SEEK_END);
 	size_t const keyFileSize = ftell(keyFile);
+	bool const keyFileEmpty = keyFileSize == 0;
 
-	if (keyFileSize == 0) {
-jmpKeygen:
+	if (keyFileEmpty) {
 
-		puts("Generating key...");
-
-		for (size_t i = 0; i < ALPHABET_SIZE; i++) {
-
-			for (size_t j = 0; j < ALPHABET_SIZE; i++) {
-
-				int const r = rand();
-				key[i][j] = r;
-
-			}
-
-		}
-
-		puts("Writing key to file...");
-
-		for (size_t i = 0; i < ALPHABET_SIZE; i++) {
-
-			for (size_t j = 0; j < ALPHABET_SIZE; i++) {
-
-				size_t const n = key[i][j];
-				fwrite(&n, sizeof(n), 1, keyFile);
-
-			}
-
-		}
+		puts("File seems empty...!");
+		keyGen = true;
 
 	}
 	else {
@@ -200,14 +180,68 @@ jmpKeygen:
 			"Still generate a new key? [Y/n]: "
 		);
 
-		if (readYn()) {
+		keyGen = readYn();
 
-			goto jmpKeygen;
+	}
+
+	if (keyGen) {
+
+		fclose(keyFile);
+		keyFile = freopen(keyPath.str, "w", keyFile);
+
+		if (!keyFile) { // Perhaps open this handle earlier so this check's up there?
+
+			puts("Cannot write to key file...");
+			// exit(EXIT_FAILURE);
+			free(keyPath.str);
+			goto jmpKeyFile;
 
 		}
-		else {
 
+		puts("Generating key...");
 
+		for (size_t i = 0; i < ABET_SIZE; i++) {
+
+			for (size_t j = 0; j < ABET_SIZE; j++) {
+
+				int const r = rand();
+				key[i][j] = r;
+
+			}
+
+		}
+
+		puts("Writing key to file...");
+
+		for (size_t i = 0; i < ABET_SIZE; i++) {
+
+			for (size_t j = 0; j < ABET_SIZE; j++) {
+
+				size_t const n = key[i][j];
+				fwrite(&n, sizeof(n), 1, keyFile);
+				// STILL ruins all yo' endianness and whatnot...!
+
+			}
+
+		}
+
+	}
+	else {
+
+		puts("Reading key from file...");
+
+		for (size_t i = 0; i < ABET_SIZE; i++) {
+
+			for (size_t j = 0; j < ABET_SIZE; j++) {
+
+				fread(
+					&(key[i][j]),
+					sizeof(key[0][0]),
+					1,
+					keyFile
+				);
+
+			}
 
 		}
 
