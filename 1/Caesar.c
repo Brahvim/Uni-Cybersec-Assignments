@@ -34,4 +34,3 @@ int main(int const p_argc, char *const *const p_argv) {
 	exit(EXIT_SUCCESS);
 
 }
-
