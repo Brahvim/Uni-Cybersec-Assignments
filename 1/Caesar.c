@@ -4,7 +4,7 @@
 
 #define STR2(x)	STR(x)
 #define STR(x) 	#x
-#define SIZE 	99
+#define SIZE 	5
 
 char caesar(char const p_plain, char const p_key) {
 	return p_plain + p_key;
