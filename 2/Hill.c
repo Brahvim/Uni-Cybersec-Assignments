@@ -1,3 +1,4 @@
+#include <time.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -12,14 +13,14 @@
 #define ABET_DTYPE uint8_t
 typedef ABET_DTYPE abet_t;
 
-#define ABET_DTYPE_SIZE	 		sizeof(abet_t)
-#define ABET_DTYPE_CHARS	 	8
-#define ABET_DTYPE_BYTES	 	8 * ABET_DTYPE_CHARS
-#define ABET_DTYPE_BITS	 		8 * ABET_DTYPE_BYTES
+#define ABET_BLK_SIZE			4
+#define ABET_SIZE				255
+#define ABET_DTYPE_SIZE			sizeof(abet_t)
+#define ABET_DTYPE_BYTES		8 * ABET_DTYPE_SIZE
 #pragma endregion
 
-typedef uint8_t matrix_t[ABET_DTYPE_SIZE][ABET_DTYPE_SIZE];
-typedef uint8_t vector_t[ABET_DTYPE_SIZE];
+typedef abet_t matrix_t[ABET_BLK_SIZE][ABET_BLK_SIZE];
+typedef abet_t vector_t[ABET_BLK_SIZE];
 
 // From my library "SML", nowadays part of the source code for "RPG-1",
 // both of which are on GitHub!:
@@ -149,18 +150,11 @@ bool readYn() {
 	return result;
 }
 
-// uint16_t bytesSwap(uint16_t const p_value) {
-// 	// See [ https://stackoverflow.com/a/36850166 ].
-// 	uint16_t result;
-// 	result = p_value >> 8;
-// 	result += (p_value & 0xFF) << 8;
-// 	return result;
-// }
-
 // See [ https://stackoverflow.com/a/8979034 ].
 #define isBigEndian() (!*((char*) ((int[]) { 1 })))
 
-void byteswap(void *const p_value, size_t const p_bytes) {
+// See [ https://stackoverflow.com/a/36850166 ].
+void byteSwap(void *const p_value, size_t const p_bytes) {
 	uint8_t *const val = p_value;
 	for (size_t i = 0; i < p_bytes / 2; ++i) {
 
@@ -181,7 +175,7 @@ jmpKeyFile:
 	printf("Write the name of a file to read a key from / store the key in: ");
 	struct ResultReadline const keyPath = readline();
 
-	FILE *keyFile = fopen(keyPath.str, "wb+");
+	FILE *keyFile = fopen(keyPath.str, "rb+");
 
 	if (!keyFile) {
 
@@ -197,7 +191,7 @@ jmpKeyFile:
 
 	bool keyGen = false;
 	matrix_t key = { 0 };
-	fseek(keyFile, 0, SEEK_END);
+
 	long const keyFileSize = ftell(keyFile);
 	bool const keyFileEmpty = keyFileSize == 0;
 
@@ -221,23 +215,13 @@ jmpKeyFile:
 
 	if (keyGen) {
 
-		// fclose(keyFile);
-		// keyFile = freopen(keyPath.str, "w", keyFile);
-		//
-		// if (!keyFile) { // Perhaps open this handle earlier so this check's up there?
-		//
-		// 	puts("Cannot write to key file...");
-		// 	// exit(EXIT_FAILURE);
-		// 	free(keyPath.str);
-		// 	goto jmpKeyFile;
-		//
-		// }
-
 		puts("Generating key...");
+		srand(time(NULL));
+		rewind(keyFile);
 
-		for (size_t i = 0; i < ABET_DTYPE_CHARS; i++) {
+		for (size_t i = 0; i < ABET_BLK_SIZE; i++) {
 
-			for (size_t j = 0; j < ABET_DTYPE_CHARS; j++) {
+			for (size_t j = 0; j < ABET_BLK_SIZE; j++) {
 
 				int const r = rand() + 1;
 				key[i][j] = r;
@@ -248,9 +232,9 @@ jmpKeyFile:
 
 		puts("Writing key to file...");
 
-		for (size_t i = 0; i < ABET_DTYPE_CHARS; i++) {
+		for (size_t i = 0; i < ABET_BLK_SIZE; i++) {
 
-			for (size_t j = 0; j < ABET_DTYPE_CHARS; j++) {
+			for (size_t j = 0; j < ABET_BLK_SIZE; j++) {
 
 				abet_t const n = key[i][j];
 				fwrite(&n, sizeof(n), 1, keyFile);
@@ -265,9 +249,9 @@ jmpKeyFile:
 
 		puts("Reading key from file...");
 
-		for (uint8_t i = 0; i < ABET_DTYPE_CHARS; i++) {
+		for (uint8_t i = 0; i < ABET_BLK_SIZE; i++) {
 
-			for (uint8_t j = 0; j < ABET_DTYPE_CHARS; j++) {
+			for (uint8_t j = 0; j < ABET_BLK_SIZE; j++) {
 
 				fread(
 					&(key[i][j]),
