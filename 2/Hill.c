@@ -8,17 +8,25 @@
 #define unlikely(p_condition)	__builtin_expect(p_condition, 0)
 #define likely(p_condition)		__builtin_expect(p_condition, 1)
 
-#define ABET_SIZE (8 * sizeof(char)) // "Alphabet".
+#pragma region "Alphabet".
+#define ABET_DTYPE uint8_t
+typedef ABET_DTYPE abet_t;
 
-typedef uint8_t vector_t[ABET_SIZE];
-typedef uint8_t matrix_t[ABET_SIZE][ABET_SIZE];
+#define ABET_DTYPE_SIZE	 		sizeof(abet_t)
+#define ABET_DTYPE_CHARS	 	8
+#define ABET_DTYPE_BYTES	 	8 * ABET_DTYPE_CHARS
+#define ABET_DTYPE_BITS	 		8 * ABET_DTYPE_BYTES
+#pragma endregion
+
+typedef uint8_t matrix_t[ABET_DTYPE_SIZE][ABET_DTYPE_SIZE];
+typedef uint8_t vector_t[ABET_DTYPE_SIZE];
 
 // From my library "SML", nowadays part of the source code for "RPG-1",
 // both of which are on GitHub!:
 uint8_t* matMul(
 	uint8_t *const p_destination,	// `p_leftColumnCount	x	p_rightColumnCount`
 	uint8_t const *const p_right,	// `p_rightRowCount		x	p_rightColumnCount`
-	uint8_t const *const p_left,		// `p_leftColumnCount	x	p_rightRowCount`
+	uint8_t const *const p_left,	// `p_leftColumnCount	x	p_rightRowCount`
 	uint8_t const p_rightRowCount,
 	uint8_t const p_leftColumnCount,
 	uint8_t const p_rightColumnCount
@@ -141,6 +149,30 @@ bool readYn() {
 	return result;
 }
 
+// uint16_t bytesSwap(uint16_t const p_value) {
+// 	// See [ https://stackoverflow.com/a/36850166 ].
+// 	uint16_t result;
+// 	result = p_value >> 8;
+// 	result += (p_value & 0xFF) << 8;
+// 	return result;
+// }
+
+// See [ https://stackoverflow.com/a/8979034 ].
+#define isBigEndian() (!*((char*) ((int[]) { 1 })))
+
+void byteswap(void *const p_value, size_t const p_bytes) {
+	uint8_t *const val = p_value;
+	for (size_t i = 0; i < p_bytes / 2; ++i) {
+
+		uint8_t const second = val[p_bytes - 1 - i];
+		uint8_t const first = val[i];
+
+		val[p_bytes - 1 - i] = first;
+		val[i] = second;
+
+	}
+}
+
 int main(int const p_argCount, char const *const p_argValues[]) {
 	printf("Write a string to encrypt: ");
 	struct ResultReadline const uin = readline();
@@ -203,11 +235,11 @@ jmpKeyFile:
 
 		puts("Generating key...");
 
-		for (size_t i = 0; i < ABET_SIZE; i++) {
+		for (size_t i = 0; i < ABET_DTYPE_CHARS; i++) {
 
-			for (size_t j = 0; j < ABET_SIZE; j++) {
+			for (size_t j = 0; j < ABET_DTYPE_CHARS; j++) {
 
-				int const r = rand();
+				int const r = rand() + 1;
 				key[i][j] = r;
 
 			}
@@ -216,11 +248,11 @@ jmpKeyFile:
 
 		puts("Writing key to file...");
 
-		for (size_t i = 0; i < ABET_SIZE; i++) {
+		for (size_t i = 0; i < ABET_DTYPE_CHARS; i++) {
 
-			for (size_t j = 0; j < ABET_SIZE; j++) {
+			for (size_t j = 0; j < ABET_DTYPE_CHARS; j++) {
 
-				uint8_t const n = key[i][j];
+				abet_t const n = key[i][j];
 				fwrite(&n, sizeof(n), 1, keyFile);
 				// STILL ruins all yo' endianness and whatnot...!
 
@@ -233,13 +265,13 @@ jmpKeyFile:
 
 		puts("Reading key from file...");
 
-		for (uint8_t i = 0; i < ABET_SIZE; i++) {
+		for (uint8_t i = 0; i < ABET_DTYPE_CHARS; i++) {
 
-			for (uint8_t j = 0; j < ABET_SIZE; j++) {
+			for (uint8_t j = 0; j < ABET_DTYPE_CHARS; j++) {
 
 				fread(
 					&(key[i][j]),
-					sizeof(key[0][0]),
+					ABET_DTYPE_BYTES,
 					1,
 					keyFile
 				);
