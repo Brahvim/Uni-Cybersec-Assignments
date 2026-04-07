@@ -10,34 +10,30 @@
 #define likely(p_condition)		__builtin_expect(p_condition, 1)
 
 #pragma region "Alphabet".
-#define ABET_DTYPE uint8_t
-typedef ABET_DTYPE abet_t;
-
-#define ABET_BLK_SIZE			4
-#define ABET_SIZE				255
-#define ABET_DTYPE_SIZE			sizeof(abet_t)
-#define ABET_DTYPE_BYTES		8 * ABET_DTYPE_SIZE
+#define ABET_DTYPE		int
+typedef ABET_DTYPE		abet_t;
+#define ABET_BLK_SIZE	3
 #pragma endregion
 
-typedef abet_t matrix_t[ABET_BLK_SIZE][ABET_BLK_SIZE];
-typedef abet_t vector_t[ABET_BLK_SIZE];
+typedef abet_t mat_t[ABET_BLK_SIZE][ABET_BLK_SIZE];
+typedef abet_t vec_t[ABET_BLK_SIZE];
 
 // From my library "SML", nowadays part of the source code for "RPG-1",
 // both of which are on GitHub!:
-uint8_t* matMul(
-	uint8_t *const p_destination,	// `p_leftColumnCount	x	p_rightColumnCount`
-	uint8_t const *const p_right,	// `p_rightRowCount		x	p_rightColumnCount`
-	uint8_t const *const p_left,	// `p_leftColumnCount	x	p_rightRowCount`
-	uint8_t const p_rightRowCount,
-	uint8_t const p_leftColumnCount,
-	uint8_t const p_rightColumnCount
+abet_t* matMul(
+	abet_t *p_destination,	// `p_leftColumnCount	x	p_rightColumnCount`
+	abet_t *p_right,	// `p_rightRowCount		x	p_rightColumnCount`
+	abet_t *p_left,	// `p_leftColumnCount	x	p_rightRowCount`
+	size_t const p_rightRowCount,
+	size_t const p_leftColumnCount,
+	size_t const p_rightColumnCount
 ) {
-	for (uint8_t i = 0; i < p_leftColumnCount; ++i) {
+	for (size_t i = 0; i < p_leftColumnCount; ++i) {
 
-		for (uint8_t j = 0; j < p_rightColumnCount; ++j) {
+		for (size_t j = 0; j < p_rightColumnCount; ++j) {
 
-			uint8_t sum = 0;
-			for (uint8_t k = 0; k < p_rightRowCount; ++k) {
+			abet_t sum = 0;
+			for (size_t k = 0; k < p_rightRowCount; ++k) {
 
 				sum += p_left[i * p_rightRowCount + k] * p_right[k * p_rightColumnCount + j];
 
@@ -62,7 +58,7 @@ struct ResultReadline {
 	size_t len = 0;
 	char *str = calloc(1, sizeof(char));
 
-	while (1) {
+	while (true) {
 
 		if (len >= cap) {
 
@@ -168,30 +164,40 @@ void byteSwap(void *const p_value, size_t const p_bytes) {
 }
 
 int main(int const p_argCount, char const *const p_argValues[]) {
-	printf("Write a string to encrypt: ");
+	printf("Write the text to deal with: ");
 	struct ResultReadline const uin = readline();
 
 jmpKeyFile:
-	printf("Write the name of a file to read a key from / store the key in: ");
+	printf("Write the path to a file to read a key from / store the key in: ");
 	struct ResultReadline const keyPath = readline();
-
-	FILE *keyFile = fopen(keyPath.str, "rb+");
+	FILE *keyFile = fopen(keyPath.str, "rb");
 
 	if (!keyFile) {
 
-		puts("File unavailable...");
-		// fclose(keyFile);
-		free(keyPath.str);
-		goto jmpKeyFile;
+		puts("Creating a new file to store the key in...");
+		keyFile = fopen(keyPath.str, "w");
+
+		if (!keyFile) {
+
+			puts("There was a problem creating the file...");
+			goto jmpKeyFile;
+
+		}
+		else {
+
+			// keyFile = freopen(keyPath.str, "rb", keyFile);
+
+		}
 
 	}
 
 	// Ruins all yo' endianness and whatnot...!:
 	// fwrite(key, sizeof(key[0]), sizeof(key), keyFile);
 
-	bool keyGen = false;
-	matrix_t key = { 0 };
 
+	bool keyGen = false;
+	mat_t keyMat = { 0 };
+	fseek(keyFile, 0, SEEK_END);
 	long const keyFileSize = ftell(keyFile);
 	bool const keyFileEmpty = keyFileSize == 0;
 
@@ -217,26 +223,26 @@ jmpKeyFile:
 
 		puts("Generating key...");
 		srand(time(NULL));
-		rewind(keyFile);
 
 		for (size_t i = 0; i < ABET_BLK_SIZE; i++) {
 
 			for (size_t j = 0; j < ABET_BLK_SIZE; j++) {
 
-				int const r = rand() + 1;
-				key[i][j] = r;
+				int const r = 1 + (rand() % RAND_MAX);
+				keyMat[i][j] = r;
 
 			}
 
 		}
 
 		puts("Writing key to file...");
+		keyFile = freopen(keyPath.str, "wb", keyFile);
 
 		for (size_t i = 0; i < ABET_BLK_SIZE; i++) {
 
 			for (size_t j = 0; j < ABET_BLK_SIZE; j++) {
 
-				abet_t const n = key[i][j];
+				abet_t const n = keyMat[i][j];
 				fwrite(&n, sizeof(n), 1, keyFile);
 				// STILL ruins all yo' endianness and whatnot...!
 
@@ -249,13 +255,13 @@ jmpKeyFile:
 
 		puts("Reading key from file...");
 
-		for (uint8_t i = 0; i < ABET_BLK_SIZE; i++) {
+		for (size_t i = 0; i < ABET_BLK_SIZE; i++) {
 
-			for (uint8_t j = 0; j < ABET_BLK_SIZE; j++) {
+			for (size_t j = 0; j < ABET_BLK_SIZE; j++) {
 
 				fread(
-					&(key[i][j]),
-					ABET_DTYPE_BYTES,
+					&(keyMat[i][j]),
+					sizeof(abet_t),
 					1,
 					keyFile
 				);
@@ -263,6 +269,76 @@ jmpKeyFile:
 			}
 
 		}
+
+	}
+
+	printf("Perform encryption? [Y/n]: ");
+	bool const taskIsEncrypt = readYn();
+
+	if (taskIsEncrypt) {
+
+		abet_t *const ciph = calloc(uin.len, sizeof(abet_t));
+
+		for (size_t i = 0; i < uin.len; i += ABET_BLK_SIZE) { // DEAL with the BLKs for me!
+
+			vec_t in = { 0 };
+			vec_t out = { 0 };
+
+			for (size_t j = 0; j < ABET_BLK_SIZE; j++) {
+
+				char const c = *(uin.str + i + j);
+				bool const cond = j < i;
+
+				in[j] =
+					cond
+					?
+					EOF
+					:
+					c
+					;
+
+				// in[j] =
+				// 	j < i
+				// 	? EOF
+				// 	: *(uin.str + i);
+
+			}
+
+			matMul(out, in, (abet_t*) keyMat, ABET_BLK_SIZE, ABET_BLK_SIZE, 1);
+
+			for (size_t j = 0; j < ABET_BLK_SIZE; j++) {
+
+				ciph[i + j] = out[i];
+
+			}
+
+		}
+
+		printf("Ciphertext: `");
+		for (size_t i = 0; i < uin.len; i++) {
+
+			putchar(ciph[i]);
+
+		}
+
+		puts("`.");
+
+		printf("Ciphertext `int`s: `[ ");
+		for (size_t i = 0; i < uin.len - 1; i++) {
+
+			printf("%d, ", (int) ciph[i]);
+
+		}
+
+		printf("%d", ciph[uin.len - 1]);
+		puts(" ]`.");
+
+		free(ciph);
+
+	}
+	else {
+
+
 
 	}
 
